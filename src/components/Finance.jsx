@@ -28,13 +28,13 @@ export default function Finance({ onAdd }) {
       <div className="section-head">
         <div>
           <h2>รายรับ-รายจ่าย</h2>
-          <div className="sub">{activeStore === 'all' ? 'รวมทุกสาขา' : storeName(stores, activeStore)}</div>
+          <div className="sub">{activeStore === 'all' ? 'รวมทุกร้าน' : storeName(stores, activeStore)}</div>
         </div>
         <button className="btn btn-sm btn-primary" onClick={onAdd}>＋ เพิ่ม</button>
       </div>
 
       {/* สรุปกำไรสุทธิ */}
-      <div className="card" style={{ background: 'linear-gradient(135deg, #1e2a52, #221a4a)' }}>
+      <div className="card card-dark">
         <div className="label muted" style={{ fontSize: 13 }}>กำไรสุทธิสะสม</div>
         <div style={{ fontSize: 30, fontWeight: 800, margin: '6px 0 14px', color: profit >= 0 ? 'var(--green)' : 'var(--red)' }}>
           {fmt(profit)}

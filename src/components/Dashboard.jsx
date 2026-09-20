@@ -1,8 +1,8 @@
 import React from 'react'
 import { useStore, fmt } from '../store.jsx'
 
-export default function Dashboard({ onQuickAdd, goTab }) {
-  const { stores, products, transactions, stock, activeStore } = useStore()
+export default function Dashboard({ onQuickAdd, goTab, onAddStore }) {
+  const { stores, products, transactions, activeStore } = useStore()
 
   const scoped = activeStore === 'all'
     ? transactions
@@ -12,7 +12,7 @@ export default function Dashboard({ onQuickAdd, goTab }) {
   const expense = scoped.filter((t) => t.type === 'expense').reduce((a, t) => a + t.amount, 0)
   const profit = income - expense
 
-  // ยอดขายต่อสาขา (สำหรับกราฟเปรียบเทียบ)
+  // ยอดขายต่อร้าน (สำหรับกราฟเปรียบเทียบ)
   const perStore = stores.map((s) => {
     const inc = transactions
       .filter((t) => t.store === s.id && t.type === 'income')
@@ -22,27 +22,20 @@ export default function Dashboard({ onQuickAdd, goTab }) {
   const maxInc = Math.max(...perStore.map((s) => s.inc), 1)
   const topStore = [...perStore].sort((a, b) => b.inc - a.inc)[0]
 
-  // แจ้งเตือนสินค้าใกล้หมด
-  const alerts = []
-  products.forEach((p) => {
-    const branches = activeStore === 'all' ? stores : stores.filter((s) => s.id === activeStore)
-    branches.forEach((s) => {
-      const st = stock[p.id]?.[s.id]
-      if (st && st.qty <= st.min) {
-        alerts.push({ product: p, store: s, qty: st.qty, out: st.qty === 0 })
-      }
-    })
-  })
-  alerts.sort((a, b) => a.qty - b.qty)
+  // แจ้งเตือนสินค้าใกล้หมด/หมด
+  const alerts = products
+    .filter((p) => (activeStore === 'all' || p.store === activeStore) && p.qty <= p.min)
+    .map((p) => ({ p, store: stores.find((s) => s.id === p.store), out: p.qty === 0 }))
+    .sort((a, b) => a.p.qty - b.p.qty)
 
   return (
     <>
       <div className="section-head">
         <div>
-          <h2>ภาพรวม{activeStore === 'all' ? 'ทุกสาขา' : ''}</h2>
+          <h2>ภาพรวม{activeStore === 'all' ? 'ทุกร้าน' : ''}</h2>
           <div className="sub">
             {activeStore === 'all'
-              ? `รวม ${stores.length} สาขา · อัปเดตล่าสุดวันนี้`
+              ? `รวม ${stores.length} ร้าน · อัปเดตล่าสุดวันนี้`
               : stores.find((s) => s.id === activeStore)?.name}
           </div>
         </div>
@@ -79,15 +72,15 @@ export default function Dashboard({ onQuickAdd, goTab }) {
         </div>
       </div>
 
-      {/* Branch comparison */}
+      {/* Store comparison */}
       {activeStore === 'all' && (
         <>
           <div className="section-head">
             <div>
-              <h2>เปรียบเทียบสาขา</h2>
-              <div className="sub">ยอดขายสะสมแต่ละสาขา</div>
+              <h2>เปรียบเทียบร้าน</h2>
+              <div className="sub">ยอดขายสะสมแต่ละร้าน</div>
             </div>
-            <span className="pill">🏆 {topStore.name}</span>
+            <span className="pill">🏆 {topStore.emoji} {topStore.name}</span>
           </div>
           <div className="card">
             {perStore.map((s) => (
@@ -97,13 +90,13 @@ export default function Dashboard({ onQuickAdd, goTab }) {
                   <span className="amt">{fmt(s.inc)}</span>
                 </div>
                 <div className="bar-track">
-                  <div
-                    className="bar-fill"
-                    style={{ width: (s.inc / maxInc) * 100 + '%', background: s.color }}
-                  />
+                  <div className="bar-fill" style={{ width: (s.inc / maxInc) * 100 + '%', background: s.color }} />
                 </div>
               </div>
             ))}
+            <button className="btn btn-sm btn-ghost btn-block" style={{ marginTop: 8 }} onClick={onAddStore}>
+              ➕ เพิ่มร้านใหม่
+            </button>
           </div>
         </>
       )}
@@ -120,17 +113,17 @@ export default function Dashboard({ onQuickAdd, goTab }) {
         {alerts.length === 0 ? (
           <div className="empty"><div className="big">✅</div>สต็อกทุกอย่างเพียงพอ</div>
         ) : (
-          alerts.slice(0, 5).map((a, i) => (
-            <div className="alert-row" key={i}>
+          alerts.slice(0, 5).map((a) => (
+            <div className="alert-row" key={a.p.id}>
               <div className="badge" style={{ background: a.out ? 'var(--red-soft)' : 'var(--amber-soft)' }}>
-                {a.product.emoji}
+                {a.p.emoji}
               </div>
               <div className="txt">
-                <div className="t">{a.product.name}</div>
-                <div className="d">{a.store.emoji} {a.store.name}</div>
+                <div className="t">{a.p.name}</div>
+                <div className="d">{a.store?.emoji} {a.store?.name}</div>
               </div>
               <span className={'tag ' + (a.out ? 'tag-low' : 'tag-warn')}>
-                {a.out ? 'หมดสต็อก' : `เหลือ ${a.qty} ${a.product.unit}`}
+                {a.out ? 'หมดสต็อก' : `เหลือ ${a.p.qty} ${a.p.unit}`}
               </span>
             </div>
           ))

@@ -1,18 +1,18 @@
 import React, { useState } from 'react'
-import { useStore } from '../store.jsx'
+import { useStore, storeById } from '../store.jsx'
 
 export default function TransferSheet({ product, onClose }) {
-  const { stores, stock, transferStock } = useStore()
-  const [from, setFrom] = useState(stores[0].id)
-  const [to, setTo] = useState(stores[1].id)
+  const { stores, transferStock } = useStore()
+  const others = stores.filter((s) => s.id !== product.store)
+  const [to, setTo] = useState(others[0]?.id ?? '')
   const [amount, setAmount] = useState(1)
 
-  const fromQty = stock[product.id][from].qty
-  const invalid = from === to || amount < 1 || amount > fromQty
+  const fromStore = storeById(stores, product.store)
+  const invalid = !to || amount < 1 || amount > product.qty
 
   const submit = () => {
     if (invalid) return
-    transferStock(product.id, from, to, Number(amount))
+    transferStock(product.id, to, Number(amount))
     onClose()
   }
 
@@ -24,40 +24,28 @@ export default function TransferSheet({ product, onClose }) {
         <div className="sheet-sub">{product.emoji} {product.name}</div>
 
         <div className="field">
-          <label>จากสาขา (มี {fromQty} {product.unit})</label>
-          <select value={from} onChange={(e) => setFrom(e.target.value)}>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>{s.emoji} {s.name} — {stock[product.id][s.id].qty} {product.unit}</option>
-            ))}
-          </select>
+          <label>จากร้าน</label>
+          <input type="text" value={`${fromStore.emoji} ${fromStore.name} — มี ${product.qty} ${product.unit}`} disabled />
         </div>
 
         <div style={{ textAlign: 'center', fontSize: 22, margin: '-4px 0 8px', color: 'var(--muted)' }}>↓</div>
 
         <div className="field">
-          <label>ไปยังสาขา</label>
+          <label>ไปยังร้าน</label>
           <select value={to} onChange={(e) => setTo(e.target.value)}>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>{s.emoji} {s.name} — {stock[product.id][s.id].qty} {product.unit}</option>
-            ))}
+            {others.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
           </select>
         </div>
 
         <div className="field">
           <label>จำนวนที่โอน ({product.unit})</label>
-          <input
-            type="number"
-            min="1"
-            max={fromQty}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+          <input type="number" min="1" max={product.qty} value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
 
-        {from === to && <div className="hint" style={{ color: 'var(--red)' }}>เลือกสาขาต้นทางและปลายทางให้ต่างกัน</div>}
-        {amount > fromQty && <div className="hint" style={{ color: 'var(--red)' }}>จำนวนเกินสต็อกที่มี</div>}
+        {amount > product.qty && <div className="hint" style={{ color: 'var(--red)' }}>จำนวนเกินสต็อกที่มี</div>}
+        <div className="hint">ถ้าร้านปลายทางมีสินค้าชื่อเดียวกันอยู่แล้ว ระบบจะรวมจำนวนให้อัตโนมัติ</div>
 
-        <button className="btn btn-primary btn-block" style={{ marginTop: 16 }} disabled={invalid} onClick={submit}>
+        <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} disabled={invalid} onClick={submit}>
           ยืนยันการโอน
         </button>
         <button className="btn btn-block btn-ghost" style={{ marginTop: 10 }} onClick={onClose}>ยกเลิก</button>

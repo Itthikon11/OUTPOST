@@ -11,11 +11,11 @@ export default function Analytics() {
   const { stores, products, salesSeries, bestSellers, activeStore } = useStore()
   const [period, setPeriod] = useState('day')
 
-  // ยอดขายรวมของ series (ตามสาขาที่เลือก หรือรวมทุกสาขา)
+  // ยอดขายรวมของ series (ตามร้านที่เลือก หรือรวมทุกร้าน)
   const trend = salesSeries.map((d) => {
     const total = activeStore === 'all'
-      ? d.s1 + d.s2 + d.s3
-      : d[activeStore]
+      ? stores.reduce((a, s) => a + (d[s.id] || 0), 0)
+      : (d[activeStore] || 0)
     return { label: d.label, date: d.date, total }
   })
 
@@ -37,19 +37,17 @@ export default function Analytics() {
     trendWithForecast[trend.length - 1].predict = trend[trend.length - 1].total
   }
 
-  // เปรียบเทียบสาขา
+  // เปรียบเทียบร้าน
   const cmpData = stores.map((s) => ({
-    name: s.name.replace('สาขา', ''),
-    ยอดขาย: salesSeries.reduce((a, d) => a + d[s.id], 0),
+    name: s.name.replace('ร้าน', '') || s.name,
+    ยอดขาย: salesSeries.reduce((a, d) => a + (d[s.id] || 0), 0),
     color: s.color,
   }))
 
   const totalSales = trend.reduce((a, d) => a + d.total, 0)
   const avgDay = Math.round(totalSales / trend.length)
 
-  const sellers = activeStore === 'all'
-    ? mergeBest(bestSellers)
-    : bestSellers[activeStore]
+  const sellers = (activeStore === 'all' ? mergeBest(bestSellers) : bestSellers[activeStore]) || []
   const maxSell = Math.max(...sellers.map(([, q]) => q), 1)
 
   return (
@@ -57,7 +55,7 @@ export default function Analytics() {
       <div className="section-head">
         <div>
           <h2>สถิติ &amp; คาดการณ์</h2>
-          <div className="sub">{activeStore === 'all' ? 'รวมทุกสาขา' : stores.find((s) => s.id === activeStore)?.name}</div>
+          <div className="sub">{activeStore === 'all' ? 'รวมทุกร้าน' : stores.find((s) => s.id === activeStore)?.name}</div>
         </div>
       </div>
 
@@ -88,12 +86,12 @@ export default function Analytics() {
       <div className="card" style={{ paddingLeft: 4, paddingRight: 8 }}>
         <ResponsiveContainer width="100%" height={210}>
           <LineChart data={trendWithForecast} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#263353" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#93a2c4', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#93a2c4', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
-            <Tooltip formatter={(v) => fmt(v)} labelStyle={{ color: '#e8edf7' }} />
-            <Line type="monotone" dataKey="total" name="ยอดขายจริง" stroke="#6366f1" strokeWidth={3} dot={{ r: 3 }} connectNulls />
-            <Line type="monotone" dataKey="predict" name="คาดการณ์" stroke="#8b5cf6" strokeWidth={2.5} strokeDasharray="6 5" dot={{ r: 3 }} connectNulls />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,33,54,0.10)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: '#5a6b82', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#5a6b82', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
+            <Tooltip formatter={(v) => fmt(v)} labelStyle={{ color: '#0e2136' }} />
+            <Line type="monotone" dataKey="total" name="ยอดขายจริง" stroke="#1f6bff" strokeWidth={3} dot={{ r: 3 }} connectNulls />
+            <Line type="monotone" dataKey="predict" name="คาดการณ์" stroke="#7aa8ff" strokeWidth={2.5} strokeDasharray="6 5" dot={{ r: 3 }} connectNulls />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -103,17 +101,17 @@ export default function Analytics() {
         <>
           <div className="section-head">
             <div>
-              <h2>เปรียบเทียบสาขา</h2>
+              <h2>เปรียบเทียบร้าน</h2>
               <div className="sub">ยอดขายรวม 7 วัน</div>
             </div>
           </div>
           <div className="card" style={{ paddingLeft: 4, paddingRight: 8 }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={cmpData} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#263353" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#93a2c4', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#93a2c4', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
-                <Tooltip formatter={(v) => fmt(v)} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,33,54,0.10)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#5a6b82', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#5a6b82', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
+                <Tooltip formatter={(v) => fmt(v)} cursor={{ fill: 'rgba(14,33,54,0.05)' }} />
                 <Bar dataKey="ยอดขาย" radius={[8, 8, 0, 0]}>
                   {cmpData.map((d, i) => <Cell key={i} fill={d.color} />)}
                 </Bar>
@@ -127,18 +125,20 @@ export default function Analytics() {
       <div className="section-head">
         <div>
           <h2>สินค้าขายดี</h2>
-          <div className="sub">{activeStore === 'all' ? 'รวมทุกสาขา' : 'สาขานี้'} · ช่วย 7 วันล่าสุด</div>
+          <div className="sub">{activeStore === 'all' ? 'รวมทุกร้าน' : 'ร้านนี้'} · ช่วง 7 วันล่าสุด</div>
         </div>
         <span className="pill">🔥 Top {sellers.length}</span>
       </div>
       <div className="card">
+        {sellers.length === 0 && <div className="empty">ยังไม่มีข้อมูลการขาย</div>}
         {sellers.map(([pid, qty], i) => {
           const p = products.find((x) => x.id === pid)
+          if (!p) return null
           return (
             <div className="cmp-item" key={pid}>
               <div className="cmp-top">
                 <span className="name">
-                  <span style={{ width: 20, color: 'var(--muted)' }}>{i + 1}.</span>
+                  <span style={{ width: 20, color: 'var(--ink-faint)' }}>{i + 1}.</span>
                   <span>{p.emoji}</span>{p.name}
                 </span>
                 <span className="amt">{qty} {p.unit}</span>
@@ -155,7 +155,7 @@ export default function Analytics() {
   )
 }
 
-// รวมสินค้าขายดีจากทุกสาขา
+// รวมสินค้าขายดีจากทุกร้าน
 function mergeBest(bestSellers) {
   const map = {}
   Object.values(bestSellers).forEach((arr) => {

@@ -58,7 +58,7 @@ export default function TxSheet({ onClose }) {
         </div>
 
         <div className="field">
-          <label>สาขา</label>
+          <label>ร้าน</label>
           <select value={store} onChange={(e) => setStore(e.target.value)}>
             {stores.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
           </select>
